@@ -62,19 +62,21 @@ app.get('/api/oauth/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
+    const userData = userResponse.data;
+
     // Insert user into MongoDB
     try {
       const database = client.db('divnectar');
       const users = database.collection('users');
       await users.insertOne({
-        id: userResponse.id,
-        username: userResponse.username,
-        avatar: userResponse.avatar
+        id: userData.id,
+        username: userData.username,
+        avatar: userData.avatar
       });
       console.log('User created in MongoDB');
       // send back to the website with the user ID
       // so we can find them in the databse.
-      res.redirect(`https://divnectar.com/create-user?id=${userResponse.id}`);
+      res.redirect(`https://divnectar.com/create-user?id=${userData.id}`);
     } catch (err) {
       console.error(err);
       res.status(500).send('Error creating user in MongoDB');
