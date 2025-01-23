@@ -6,7 +6,7 @@ require('dotenv').config();
 const app = express();
 const PORT = 4477;
 app.use(cors({
-  origin: '*',
+  origin: 'https://divnectar.com',
   methods: ['GET', 'POST'],
 }));
 // update
