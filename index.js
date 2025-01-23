@@ -1,26 +1,16 @@
 const express = require('express');
 const axios = require('axios');
-const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 const PORT = 4477;
-
-// app.use(cors({
-//   origin: 'https://divnectar.com',
-//   methods: ['GET', 'POST'],
-// }));
-
 // update
 // OAuth2 details
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const REDIRECT_URI = process.env.DISCORD_REDIRECT_URI;
 
-
-
 app.get('/api/oauth/discord', (req, res) => {
-  console.log('request for discord oAuth')
   const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
     REDIRECT_URI
   )}&response_type=code&scope=identify email guilds`;
