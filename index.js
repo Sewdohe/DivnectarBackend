@@ -47,7 +47,7 @@ app.get('/api/oauth/callback', async (req, res) => {
     });
 
     // res.json(userResponse.data); // Send user info to the frontend
-    res.redirect(`https://divnectar.com/?token=${accessToken}`);
+    res.redirect(`https://divnectar.com/api/oauth/create-user?token=${accessToken}`);
   } catch (err) {
     console.error(err);
     res.status(500).send('OAuth failed');
