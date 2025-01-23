@@ -3,7 +3,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
-const PORT = 3001;
+const PORT = 4477;
 // update
 // OAuth2 details
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
