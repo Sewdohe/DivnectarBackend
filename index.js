@@ -77,6 +77,9 @@ app.get('/api/oauth/callback', async (req, res) => {
       // send back to the website with the user ID
       // so we can find them in the databse.
       res.redirect(`https://divnectar.com/create-user?id=${userData.id}`);
+      // add cookies that we can read later
+      res.cookie('userId', userData.id, { httpOnly: true, secure: true });
+      res.cookie('userToken', accessToken, { httpOnly: true, secure: true });
     } catch (err) {
       console.error(err);
       res.status(500).send('Error creating user in MongoDB');
