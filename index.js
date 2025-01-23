@@ -46,7 +46,8 @@ app.get('/api/oauth/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    res.json(userResponse.data); // Send user info to the frontend
+    // res.json(userResponse.data); // Send user info to the frontend
+    res.redirect(`https://divnectar.com/?token=${accessToken}`);
   } catch (err) {
     console.error(err);
     res.status(500).send('OAuth failed');
