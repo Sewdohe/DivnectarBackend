@@ -74,11 +74,19 @@ app.get('/api/oauth/callback', async (req, res) => {
         avatar: userData.avatar
       });
       console.log('User created in MongoDB');
-
       console.log('Creating user cookies...')
+      
       // add cookies that we can read later
-      res.cookie('userId', userData.id, { httpOnly: true, secure: true });
-      res.cookie('userToken', accessToken, { httpOnly: true, secure: true });
+      res.cookie(
+        'userId', 
+        userData.id, 
+        { secure: true, httpOnly: false, sameSite: 'None', domain: 'divnectar.com', maxAge: 7 * 24 * 60 * 60 * 1000 }
+      );
+      res.cookie(
+        'userToken', 
+        accessToken, 
+        { secure: true, httpOnly: false, sameSite: 'None', domain: 'divnectar.com', maxAge: 7 * 24 * 60 * 60 * 1000 }
+      );
 
       // send back to the website with the user ID
       // so we can find them in the databse.
