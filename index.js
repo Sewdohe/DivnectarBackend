@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 require('dotenv').config();
+const cors = require('cors')
 
 const app = express();
 const PORT = 4477;
@@ -9,6 +10,12 @@ const PORT = 4477;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const REDIRECT_URI = process.env.DISCORD_REDIRECT_URI;
+
+app.use(cors({
+  origin: 'https://divnectar.com',  // Allow requests only from your frontend domain
+  methods: ['GET', 'POST', 'OPTIONS'],  // Allow the required methods
+  allowedHeaders: ['Content-Type', 'Authorization'],  // Allow specific headers
+}));
 
 app.get('/api/oauth/discord', (req, res) => {
   console.log('Redirecting to Discord OAuth');
