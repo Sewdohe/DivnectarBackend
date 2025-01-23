@@ -2,9 +2,25 @@ const express = require('express');
 const axios = require('axios');
 require('dotenv').config();
 const cors = require('cors')
+const { MongoClient } = require('mongodb')
 
 const app = express();
 const PORT = 4477;
+
+const uri = process.env.MONGO_URI;
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+async function connectToMongoDB() {
+  try {
+    await client.connect();
+    console.log('Connected to MongoDB');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+connectToMongoDB();
+
 // update
 // OAuth2 details
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -46,8 +62,23 @@ app.get('/api/oauth/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    // res.json(userResponse.data); // Send user info to the frontend
-    res.redirect(`https://divnectar.com/api/oauth/create-user?token=${accessToken}`);
+    // Insert user into MongoDB
+    try {
+      const database = client.db('divnectar');
+      const users = database.collection('users');
+      await users.insertOne({
+        id: userResponse.id,
+        username: userResponse.username,
+        avatar: userResponse.avatar
+      });
+      console.log('User created in MongoDB');
+      // send back to the website with the user ID
+      // so we can find them in the databse.
+      res.redirect(`https://divnectar.com/create-user?id=${userResponse.id}`);
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Error creating user in MongoDB');
+    }
   } catch (err) {
     console.error(err);
     res.status(500).send('OAuth failed');
