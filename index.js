@@ -82,12 +82,12 @@ app.get('/api/oauth/callback', async (req, res) => {
       res.cookie(
         'userId', 
         userData.id, 
-        { secure: true, httpOnly: false, sameSite: 'None', domain: 'divnectar.com', maxAge: 7 * 24 * 60 * 60 * 1000 }
+        { secure: true, httpOnly: false, sameSite: 'None', domain: process.env.COOKIE_DOMAIN, maxAge: 7 * 24 * 60 * 60 * 1000 }
       );
       res.cookie(
         'userToken', 
         accessToken, 
-        { secure: true, httpOnly: false, sameSite: 'None', domain: 'divnectar.com', maxAge: 7 * 24 * 60 * 60 * 1000 }
+        { secure: true, httpOnly: false, sameSite: 'None', domain: process.env.COOKIE_DOMAIN, maxAge: 7 * 24 * 60 * 60 * 1000 }
       );
 
       // send back to the website with the user ID
