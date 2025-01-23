@@ -1,6 +1,6 @@
 const express = require('express');
 const axios = require('axios');
-require('dotenv').config();
+require('@dotenvx/dotenvx').config()
 const cors = require('cors')
 const { MongoClient } = require('mongodb')
 
@@ -9,6 +9,8 @@ const PORT = 4477;
 
 const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+console.log('connecting to Divnectar MongoDB...');
 
 async function connectToMongoDB() {
   try {
@@ -90,7 +92,7 @@ app.get('/api/oauth/callback', async (req, res) => {
 
       // send back to the website with the user ID
       // so we can find them in the databse.
-      res.redirect(`https://divnectar.com/create-user?id=${userData.id}`);
+      res.redirect(`${process.env.AUTH_COMPLETE_REDIRECT}?id=${userData.id}`);
     } catch (err) {
       console.error(err);
       res.status(500).send('Error creating user in MongoDB');
@@ -103,4 +105,6 @@ app.get('/api/oauth/callback', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  var environment = process.env.NODE_ENV
+  console.log('Express server running in ' + environment + ' mode');
 });
