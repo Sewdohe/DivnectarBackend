@@ -5,10 +5,12 @@ require('dotenv').config();
 
 const app = express();
 const PORT = 4477;
-app.use(cors({
-  origin: 'https://divnectar.com',
-  methods: ['GET', 'POST'],
-}));
+
+// app.use(cors({
+//   origin: 'https://divnectar.com',
+//   methods: ['GET', 'POST'],
+// }));
+
 // update
 // OAuth2 details
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
