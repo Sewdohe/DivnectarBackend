@@ -70,23 +70,34 @@ app.get('/api/oauth/callback', async (req, res) => {
     try {
       const database = client.db('divnectar');
       const users = database.collection('users');
-      await users.insertOne({
-        id: userData.id,
-        username: userData.username,
-        avatar: userData.avatar
-      });
-      console.log('User created in MongoDB');
+
+      // Check if the user already exists
+      const existingUser = await users.findOne({ id });
+      if (existingUser) {
+        console.log(`User ${userData.userName} already exists in MongoDB`);
+         // Update the existing user's information
+        await users.updateOne({ id }, { $set: { username, avatar } });
+        return res.status(200).json({ message: 'User updated successfully' });
+      } else {
+        await users.insertOne({
+          id: userData.id,
+          username: userData.username,
+          avatar: userData.avatar,
+          email: userData.email,
+        });
+        console.log('User created in MongoDB');
+      }
       console.log('Creating user cookies...')
-      
+
       // add cookies that we can read later
       res.cookie(
-        'userId', 
-        userData.id, 
+        'userId',
+        userData.id,
         { secure: true, httpOnly: false, sameSite: 'None', domain: process.env.COOKIE_DOMAIN, maxAge: 7 * 24 * 60 * 60 * 1000 }
       );
       res.cookie(
-        'userToken', 
-        accessToken, 
+        'userToken',
+        accessToken,
         { secure: true, httpOnly: false, sameSite: 'None', domain: process.env.COOKIE_DOMAIN, maxAge: 7 * 24 * 60 * 60 * 1000 }
       );
 
