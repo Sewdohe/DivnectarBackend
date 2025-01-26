@@ -154,10 +154,33 @@ app.get("/api/og-image", async (req, res) => {
     const imageBuffer = response.data
     const screenshotUrl = await uploadImageToStrapi(imageBuffer, req.query.url);
     // the upload function returns the URL sent to the client.
-    res.send(screenshotUrl)
+    res.send(await storeScreenshotUrl(req.query.url, screenshotUrl));
   } catch (error) {
-    console.error("Error taking screenshot:", error);
+    console.log("Error taking screenshot:", error);
     res.status(500).send("Error taking screenshot");
+  }
+});
+
+app.get("/api/check-og-image", async (req, res) => {
+  console.log(clc.yellow("Checking for existing OG image:" + clc.blue(req.query.path)));
+  const path = "https://divnectar.com" + req.query.path;
+  if (!path) return res.status(400).send("Missing path");
+
+  try {
+    const db = client.db('divnectar');
+    const collection = db.collection('og_images');
+    const existingImage = await collection.findOne({ path });
+
+    if (existingImage) {
+      console.log(clc.green("OG image exists in MongoDB"));
+      return res.json({ exists: true, url: existingImage.screenshotUrl });
+    } else {
+      console.log(clc.red("OG image does not exist in MongoDB"));
+      return res.json({ exists: false });
+    }
+  } catch (error) {
+    console.error("Error checking OG image:", error);
+    res.status(500).send("Error checking OG image");
   }
 });
 
@@ -187,7 +210,23 @@ async function uploadImageToStrapi(imageBuffer, url) {
     console.log(clc.yellow("Process complete. Image URL:"), clc.blue(`https://cms.divnectar.com${response.data[0].url}`));
     return `https://cms.divnectar.com${response.data[0].url}`;
   } catch (error) {
-    console.error(clc.red.bold("Error uploading image to Strapi:", error));
+    console.log(clc.red.bold("Error uploading image to Strapi:", error));
     return "Error uploading image to Strapi";
   }
+}
+
+// function stores the screenshot in the database, or checks if one already exists
+// and returns the URL if so.
+async function storeScreenshotUrl(path, screenshotUrl) {
+  const db = client.db('divnectar');
+  const collection = db.collection('og_images');
+
+  const existingImage = await collection.findOne({ path });
+  if (existingImage) {
+    return existingImage.screenshotUrl;
+  }
+
+  await collection.insertOne({ path, screenshotUrl });
+  console.log(clc.green("Stored screenshot URL in MongoDB"));
+  return screenshotUrl;
 }
