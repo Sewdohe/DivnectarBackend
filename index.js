@@ -151,11 +151,9 @@ app.get("/api/og-image", async (req, res) => {
   try {
     const response = await axios.post(url, data, { headers, responseType: 'arraybuffer' });
     const imageBuffer = response.data
-    console.log('imagebuffer')
-
-    uploadImageToStrapi(imageBuffer, req.query.url, { response: 'arraybuffer' });
-    res.set("Content-Type", "image/png");
-    res.send(Buffer.from(imageBuffer, 'binary'));
+    const screenshotUrl = await uploadImageToStrapi(imageBuffer, req.query.url);
+    // the upload function returns the URL sent to the client.
+    res.send(screenshotUrl)
   } catch (error) {
     console.error("Error taking screenshot:", error);
     res.status(500).send("Error taking screenshot");
@@ -182,7 +180,8 @@ async function uploadImageToStrapi(imageBuffer, url) {
     headers: {
       "Authorization": `Bearer ${process.env.STRAPI_API_KEY}`,
     },
-  });
+  })
 
-  res.send(`https://cms.divnectar.com/uploads/${response.data}`);
+
+  return `https://cms.divnectar.com${response.data[0].url}`;
 }
