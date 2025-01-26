@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js",
-    "develop": "dotenvx run -f .env.development -- nodemon index.js"
+    "start": "NODE_ENV=production node index.js",
+    "develop": "dotenvx run -f .env.development -- node index.js",
+    "hotdev": "NODE_ENV=development dotenvx run -f .env.development -- nodemon index.js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +23,7 @@
     "@dotenvx/dotenvx": "^1.33.0",
     "axios": "^1.7.9",
     "buffer": "^6.0.3",
+    "cli-color": "^2.0.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

@@ -4,29 +4,26 @@ require("@dotenvx/dotenvx").config();
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
 const { Blob } = require("buffer");
+var clc = require("cli-color");
 
 const app = express();
 const PORT = 4477;
 
 const uri = process.env.MONGO_URI;
-const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+const client = new MongoClient(uri);
 
-console.log("connecting to Divnectar MongoDB...");
+console.log(clc.blue.bold("connecting to Divnectar MongoDB...\n"));
 
 async function connectToMongoDB() {
   try {
     await client.connect();
-    console.log("Connected to MongoDB");
+    console.log(clc.green.bold("Connected to MongoDB"));
   } catch (err) {
-    console.error(err);
+    console.error(clc.red(err));
   }
 }
 
 connectToMongoDB();
-
 // update
 // OAuth2 details
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -40,6 +37,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
   })
 );
+console.log(clc.blue.bold('Enabled cors for divnectar.com\n'));
 
 app.get("/api/oauth/discord", (req, res) => {
   console.log("Redirecting to Discord OAuth");
@@ -133,7 +131,7 @@ app.get("/api/oauth/callback", async (req, res) => {
 });
 
 app.get("/api/og-image", async (req, res) => {
-  //TODO: write OG image function
+  console.log(clc.yellow("request for screenshot of " + req.query.url));
   const TOKEN = process.env.BROWSERLESS_TOKEN;
   const url = `https://browserless.divnectar.com/screenshot?token=${TOKEN}`;
   const headers = {
@@ -143,13 +141,16 @@ app.get("/api/og-image", async (req, res) => {
   const data = {
     url: req.query.url,
     options: {
-      fullPage: true,
+      fullPage: false,
       type: "png",
     },
   };
 
   try {
     const response = await axios.post(url, data, { headers, responseType: 'arraybuffer' });
+    if (response.status !== 200 & response.data) {
+      console.log(clc.green("Screenshot taken successfully, recieved buffer"));
+    }
     const imageBuffer = response.data
     const screenshotUrl = await uploadImageToStrapi(imageBuffer, req.query.url);
     // the upload function returns the URL sent to the client.
@@ -161,27 +162,32 @@ app.get("/api/og-image", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(clc.yellow.bold(`Listening for requests on port http://localhost:${PORT}\n`));
   var environment = process.env.NODE_ENV;
-  console.log("Express server running in " + environment + " mode");
+  environment = environment == 'development' ? clc.magenta.bold.underline('development') : clc.green.bold.underline('production')
+  console.log(clc.yellow("Express server running in ") + environment + clc.yellow(" mode\n"));
 });
 
 // UTILITY FUNCTIONS
 async function uploadImageToStrapi(imageBuffer, url) {
   const pathname = url.replace(/\/$/, ''); // Remove trailing slash if any
   const siteRoute = pathname.split('/').pop(); // Get the last part of the pathname
-  console.log("Uploading image to Strapi:", siteRoute);
+  console.log(clc.yellow("Uploading image to Strapi:" + siteRoute));
 
   const form = new FormData();
   const blob = new Blob([imageBuffer], { type: 'image/png' });
   form.append("files", blob, `${siteRoute}.png`);
 
-  const response = await axios.post("https://cms.divnectar.com/api/upload", form, {
-    headers: {
-      "Authorization": `Bearer ${process.env.STRAPI_API_KEY}`,
-    },
-  })
-
-
-  return `https://cms.divnectar.com${response.data[0].url}`;
+  try {
+    const response = await axios.post("https://cms.divnectar.com/api/upload", form, {
+      headers: {
+        "Authorization": `Bearer ${process.env.STRAPI_API_KEY}`,
+      },
+    })
+    console.log(clc.yellow("Process complete. Image URL:"), clc.blue(`https://cms.divnectar.com${response.data[0].url}`));
+    return `https://cms.divnectar.com${response.data[0].url}`;
+  } catch (error) {
+    console.error(clc.red.bold("Error uploading image to Strapi:", error));
+    return "Error uploading image to Strapi";
+  }
 }
