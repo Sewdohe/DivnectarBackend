@@ -66,18 +66,17 @@ app.get('/api/oauth/callback', async (req, res) => {
 
     const userData = userResponse.data;
 
+    console.log('User data:', userData);
     // Insert user into MongoDB
     try {
       const database = client.db('divnectar');
       const users = database.collection('users');
 
       // Check if the user already exists
-      const existingUser = await users.findOne({ id });
+      const existingUser = await users.findOne({ id: userData.id });
       if (existingUser) {
-        console.log(`User ${userData.userName} already exists in MongoDB`);
+        console.log(`User ${userData.username} already exists in MongoDB`);
          // Update the existing user's information
-        await users.updateOne({ id }, { $set: { username, avatar } });
-        return res.status(200).json({ message: 'User updated successfully' });
       } else {
         await users.insertOne({
           id: userData.id,
@@ -103,7 +102,11 @@ app.get('/api/oauth/callback', async (req, res) => {
 
       // send back to the website with the user ID
       // so we can find them in the databse.
-      res.redirect(`${process.env.AUTH_COMPLETE_REDIRECT}?id=${userData.id}`);
+      if (existingUser) {
+        res.redirect(`${process.env.AUTH_COMPLETE_REDIRECT}?returning=true&id=${userData.id}`);
+      } else {
+        res.redirect(`${process.env.AUTH_COMPLETE_REDIRECT}?id=${userData.id}`);
+      }
     } catch (err) {
       console.error(err);
       res.status(500).send('Error creating user in MongoDB');
