@@ -161,7 +161,77 @@ app.get("/api/og-image", async (req, res) => {
   }
 });
 
+app.post("/api/skyblock/command", async (req, res) => {
+  const command = req.query.command;
+  console.log(clc.yellow("Request to run as command on skyblock", command));
+
+  if (!command) {
+    return res.status(400).send("Missing command");
+  }
+
+  const serverTAPUrl = "http://api.divnectar.com";
+  const serverTAPKey = process.env.SERVERTAP_API_KEY;
+
+  const data = {
+    command: command,
+    time: 0
+  };
+
+  console.log(data)
+
+  try {
+    console.log(clc.blue("Running command on skyblock:"), clc.yellow(command));
+    const response = await axios.post(`${serverTAPUrl}/v1/server/exec`, data, {
+      headers: {
+        "key": `${serverTAPKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      }
+    });
+    if (response.status !== 200) {
+      throw new Error("Failed to run command");
+    }
+    console.log(clc.green("Command executed successfully"));
+    res.send("Command executed successfully");
+  } catch (error) {
+    console.error("Error running command:", error);
+    // res.status(500).send("Error running command");
+  }
+});
+
+app.post("/api/skyblock/get-player", async (req, res) => {
+  const { uuid } = req.body;
+
+  if (!uuid) {
+    return res.status(400).send("Missing player UUID");
+  }
+
+  const serverTAPUrl = "https://api.divnectar.com";
+  const serverTAPKey = process.env.SERVERTAP_API_KEY;
+
+  const headers = {
+    "key": `Bearer ${serverTAPKey}`,
+    "Content-Type": "application/json",
+  };
+
+  const data = {
+    command: `${command}`,
+  };
+
+  try {
+    const response = await axios.post(`${serverTAPUrl}/v1/players/${uuid}`, data, { headers });
+    if (response.status !== 200) {
+      throw new Error("Failed to search for player name");
+    }
+    console.log(clc.green(`Player found: ${response.data.displayName}`));
+    res.send("Command executed successfully");
+  } catch (error) {
+    console.error("Error running command:", error);
+    res.status(500).send("Error running command");
+  }
+});
+
 app.get("/api/check-og-image", async (req, res) => {
+  //TODO: check timestamp on image and re-generate if older than 24 hours
   console.log(clc.yellow("Checking for existing OG image:" + clc.blue(req.query.path)));
   const path = "https://divnectar.com" + req.query.path;
   if (!path) return res.status(400).send("Missing path");
