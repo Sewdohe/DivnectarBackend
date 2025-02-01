@@ -5,6 +5,8 @@ const cors = require("cors");
 const { MongoClient } = require("mongodb");
 const { Blob } = require("buffer");
 var clc = require("cli-color");
+const { env } = require("process");
+var minecraftRoutes = require("./api-minecraft");
 
 const app = express();
 const PORT = 4477;
@@ -30,14 +32,27 @@ const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const REDIRECT_URI = process.env.DISCORD_REDIRECT_URI;
 
-app.use(
-  cors({
-    origin: "https://divnectar.com", // Allow requests only from your frontend domain
-    methods: ["GET", "POST", "OPTIONS"], // Allow the required methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
-  })
-);
-console.log(clc.blue.bold('Enabled cors for divnectar.com\n'));
+if (env.NODE_ENV === 'production') {
+  app.use(
+    cors({
+      origin: "https://divnectar.com", // Allow requests only from your frontend domain
+      methods: ["GET", "POST", "OPTIONS"], // Allow the required methods
+      allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
+    })
+  );
+  console.log(clc.blue.bold('Enabled cors for divnectar.com\n'));
+} else if (env.NODE_ENV === 'development') {
+  app.use(
+    cors({
+      origin: "http://localhost:4321", // Allow requests only from your frontend domain
+      methods: ["GET", "POST", "OPTIONS"], // Allow the required methods
+      allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
+    })
+  );
+  console.log(clc.blue.bold('Enabled cors for localhost:4477\n'));
+}
+
+app.use("/api/minecraft/", minecraftRoutes);
 
 app.get("/api/oauth/discord", (req, res) => {
   console.log("Redirecting to Discord OAuth");
@@ -209,7 +224,7 @@ app.post("/api/skyblock/get-player", async (req, res) => {
   const serverTAPKey = process.env.SERVERTAP_API_KEY;
 
   const headers = {
-    "key": `Bearer ${serverTAPKey}`,
+    "key": `${serverTAPKey}`,
     "Content-Type": "application/json",
   };
 
