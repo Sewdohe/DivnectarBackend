@@ -1,5 +1,8 @@
+require("@dotenvx/dotenvx").config();
+
+
 // UTILITY FUNCTIONS
-export async function uploadImageToStrapi(imageBuffer, url) {
+async function uploadImageToStrapi(imageBuffer, url) {
   const pathname = url.replace(/\/$/, ''); // Remove trailing slash if any
   const siteRoute = pathname.split('/').pop(); // Get the last part of the pathname
   console.log(clc.yellow("Uploading image to Strapi:" + siteRoute));
@@ -23,7 +26,7 @@ export async function uploadImageToStrapi(imageBuffer, url) {
 }
 // function stores the screenshot in the database, or checks if one already exists
 // and returns the URL if so.
-export async function storeScreenshotUrl(path, screenshotUrl) {
+async function storeScreenshotUrl(path, screenshotUrl) {
   const db = client.db('divnectar');
   const collection = db.collection('og_images');
 
@@ -36,3 +39,5 @@ export async function storeScreenshotUrl(path, screenshotUrl) {
   console.log(clc.green("Stored screenshot URL in MongoDB"));
   return screenshotUrl;
 }
+
+module.exports = {  uploadImageToStrapi, storeScreenshotUrl };

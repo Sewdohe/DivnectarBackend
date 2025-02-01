@@ -3,6 +3,12 @@ const router = express.Router();
 const axios = require("axios");
 var clc = require("cli-color");
 
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+const REDIRECT_URI = process.env.DISCORD_REDIRECT_URI;
+
+const { client } = require("./mongoClient");
+
 // base route /api/oauth
 
 router.get("/discord", (req, res) => {

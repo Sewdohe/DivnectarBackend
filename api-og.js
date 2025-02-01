@@ -3,6 +3,7 @@ const router = express.Router();
 const axios = require("axios");
 var clc = require("cli-color");
 var { uploadImageToStrapi, storeScreenshotUrl } = require("./utils");
+var { client } = require("./mongoClient");
 
 router.get("/og-image", async (req, res) => {
   console.log(clc.yellow("request for screenshot of " + req.query.url));
