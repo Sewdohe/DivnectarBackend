@@ -3,6 +3,7 @@ const router = express.Router();
 const axios = require("axios");
 const mysql = require("mysql");
 var clc = require("cli-color");
+var { client } = require("./mongoClient")
 
 // Create a connection to the database
 const db = mysql.createConnection({
@@ -31,7 +32,7 @@ router.get('/link-minecraft', async (req, res) => {
 
   // Query the database to check if the Discord ID exists
   const query = 'SELECT uuid FROM discordsrv_accounts WHERE discord = ?';
-  db.query(query, [discord_id], (err, results) => {
+  db.query(query, [discord_id], async (err, results) => {
     if (err) {
       console.error('Error querying the database:', err);
       return res.status(500).send('Error querying the database');
@@ -39,6 +40,15 @@ router.get('/link-minecraft', async (req, res) => {
 
     if (results.length > 0) {
       const minecraft_uuid = results[0].uuid;
+      //TODO: Insert the UUID into the users profile on MongoDB
+      const db = client.db("divnectar");
+      const collection = db.collection('users');
+      await collection.updateOne(
+        { id: discord_id },
+        { $set: { minecraft_uuid: minecraft_uuid } },
+        { upsert: true }
+      );
+      console.log(clc.green('Minecraft UUID added to user data in MongoDB'));
       return res.json({ minecraft_uuid });
     } else {
       return res.status(404).send('Discord ID not found');
