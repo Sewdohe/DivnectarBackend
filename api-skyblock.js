@@ -2,12 +2,16 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 var clc = require("cli-color");
+var bodyParser = require("body-parser");
+var jsonParser = bodyParser.json();
 
 // all routes prefixed with /api/minecraft
 router.get("/players", async (req, res) => {
   const serverTAPUrl = "https://api.divnectar.com";
   const serverTAPKey = process.env.SERVERTAP_API_KEY;
-	console.log(clc.yellow.bold(`ServerTAP Key: ${serverTAPKey} | hitting ${serverTAPUrl}`));
+  console.log(
+    clc.yellow.bold(`ServerTAP Key: ${serverTAPKey} | hitting ${serverTAPUrl}`)
+  );
 
   const headers = {
     key: `${serverTAPKey}`,
@@ -15,10 +19,7 @@ router.get("/players", async (req, res) => {
   };
 
   try {
-    const response = await axios.get(
-      `${serverTAPUrl}/v1/players`,
-      { headers }
-    );
+    const response = await axios.get(`${serverTAPUrl}/v1/players`, { headers });
     if (response.status !== 200) {
       throw new Error("Failed to get online player list");
     }
@@ -34,7 +35,9 @@ router.get("/players", async (req, res) => {
 router.get("/players/all", async (req, res) => {
   const serverTAPUrl = "https://api.divnectar.com";
   const serverTAPKey = process.env.SERVERTAP_API_KEY;
-	console.log(clc.yellow.bold(`ServerTAP Key: ${serverTAPKey} | hitting ${serverTAPUrl}`));
+  console.log(
+    clc.yellow.bold(`ServerTAP Key: ${serverTAPKey} | hitting ${serverTAPUrl}`)
+  );
 
   const headers = {
     key: `${serverTAPKey}`,
@@ -42,10 +45,9 @@ router.get("/players/all", async (req, res) => {
   };
 
   try {
-    const response = await axios.get(
-      `${serverTAPUrl}/v1/players/all`,
-      { headers }
-    );
+    const response = await axios.get(`${serverTAPUrl}/v1/players/all`, {
+      headers,
+    });
     if (response.status !== 200) {
       throw new Error("Failed to get complete player list");
     }
@@ -70,18 +72,18 @@ router.post("/command", async (req, res) => {
 
   const data = {
     command: command,
-    time: 0
+    time: 0,
   };
 
-  console.log(data)
+  console.log(data);
 
   try {
     console.log(clc.blue("Running command on skyblock:"), clc.yellow(command));
     const response = await axios.post(`${serverTAPUrl}/v1/server/exec`, data, {
       headers: {
-        "key": `${serverTAPKey}`,
+        key: `${serverTAPKey}`,
         "Content-Type": "application/x-www-form-urlencoded",
-      }
+      },
     });
     if (response.status !== 200) {
       throw new Error("Failed to run command");
@@ -105,7 +107,7 @@ router.post("/get-player", async (req, res) => {
   const serverTAPKey = process.env.SERVERTAP_API_KEY;
 
   const headers = {
-    "key": `${serverTAPKey}`,
+    key: `${serverTAPKey}`,
     "Content-Type": "application/json",
   };
 
@@ -114,7 +116,11 @@ router.post("/get-player", async (req, res) => {
   };
 
   try {
-    const response = await axios.post(`${serverTAPUrl}/v1/players/${uuid}`, data, { headers });
+    const response = await axios.post(
+      `${serverTAPUrl}/v1/players/${uuid}`,
+      data,
+      { headers }
+    );
     if (response.status !== 200) {
       throw new Error("Failed to search for player name");
     }
@@ -123,6 +129,44 @@ router.post("/get-player", async (req, res) => {
   } catch (error) {
     console.error("Error running command:", error);
     res.status(500).send("Error running command");
+  }
+});
+
+router.post("/player/online", jsonParser, async (req, res) => {
+  const uuid = req.body.uuid;
+
+  if (!uuid) {
+    return res.status(400).send("Missing player UUID or message");
+  }
+
+  const serverTAPUrl = "https://api.divnectar.com";
+  const serverTAPKey = process.env.SERVERTAP_API_KEY;
+
+  const headers = {
+    key: `${serverTAPKey}`,
+    'Content-Type': 'multipart/form-data'
+  };
+
+  const data = new FormData();
+  data.append("uuid", uuid);
+  data.append("message", '%player_online%');
+
+  try {
+    const response = await axios.post(
+      `${serverTAPUrl}/v1/placeholders/replace`,
+      data,
+      { headers }
+    );
+    if (response.status !== 200) {
+      throw new Error("Failed to get online status");
+    }
+    console.log(
+      clc.green(`player ${response.data == true ? "is" : "is not"} online`)
+    );
+    res.send(response.data);
+  } catch (error) {
+    console.error("Error getting online status:", error);
+    res.status(500).send("Error getting online status: ");
   }
 });
 
