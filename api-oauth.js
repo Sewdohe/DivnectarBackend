@@ -55,6 +55,12 @@ router.get("/callback", async (req, res) => {
       const existingUser = await users.findOne({ id: userData.id });
       if (existingUser) {
         console.log(`User ${userData.username} already exists in MongoDB`);
+        await users.updateOne({
+          id: userData.id,
+          username: userData.username,
+          avatar: userData.avatar,
+          email: userData.email,
+        });
         // Update the existing user's information
       } else {
         await users.insertOne({

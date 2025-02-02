@@ -4,6 +4,7 @@ const axios = require("axios");
 const mysql = require("mysql");
 var clc = require("cli-color");
 var { client } = require("./mongoClient")
+const { env } = require("process");
 
 // Create a connection to the database
 const db = mysql.createConnection({
@@ -49,9 +50,18 @@ router.get('/link-minecraft', async (req, res) => {
         { upsert: true }
       );
       console.log(clc.green('Minecraft UUID added to user data in MongoDB'));
-      return res.json({ minecraft_uuid });
+
+      if (env.NODE_ENV === "production") {
+        res.redirect('https://divnectar.com/profile?just_linked=true');
+      } else if (env.NODE_ENV === "development") {
+        res.redirect('http://localhost:4321/profile?just_linked=true');
+      }
     } else {
-      return res.status(404).send('Discord ID not found');
+      if (env.NODE_ENV === "production") {
+        res.redirect('https://divnectar.com/profile?just_linked=false?err=minecraft_uuid_not_found');
+      } else if (env.NODE_ENV === "development") {
+        res.redirect('http://localhost:4321/profile?just_linked=false?err=minecraft_uuid_not_found');
+      }
     }
   });
 });

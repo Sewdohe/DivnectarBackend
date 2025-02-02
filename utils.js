@@ -1,5 +1,7 @@
 require("@dotenvx/dotenvx").config();
-
+var clc = require("cli-color");
+const axios = require("axios");
+var { client } = require("./mongoClient");
 
 // UTILITY FUNCTIONS
 async function uploadImageToStrapi(imageBuffer, url) {
