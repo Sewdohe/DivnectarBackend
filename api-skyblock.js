@@ -67,7 +67,6 @@ router.get("/players", async (req, res) => {
     if (response.status !== 200) {
       throw new Error("Failed to get online player list");
     }
-    log(`Players: ${response.data}`, "info");
     res.send(response.data);
   } catch (error) {
     console.error("Error getting players:", error);
@@ -96,7 +95,6 @@ router.get("/players/all", async (req, res) => {
     if (response.status !== 200) {
       throw new Error("Failed to get complete player list");
     }
-    log(`All Players: ${response.data}`, "info");
     res.send(response.data);
   } catch (error) {
     console.error("Error getting all players:", error);
