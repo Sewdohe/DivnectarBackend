@@ -5,6 +5,9 @@ var bodyParser = require("body-parser");
 var jsonParser = bodyParser.json();
 const { log } = require("./logger");
 const { wss } = require("./websocket"); // Import the server instance
+const WebSocket = require("ws");
+
+//added websocket lib tto skyblok
 
 // Broadcast function to send data to all connected clients
 function broadcast(data) {
