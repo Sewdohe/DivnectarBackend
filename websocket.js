@@ -1,5 +1,5 @@
 const WebSocket = require("ws");
-
+const { log } = require("./logger");
 const wss = new WebSocket.Server({ noServer: true });
 
 // Handle WebSocket connections
