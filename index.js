@@ -32,7 +32,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
   })
 );
-log("Enabled cors for divnectar.com\n", "info");
+log("Enabled cors for divnectar.com\n");
 app.use(
   cors({
     origin: "http://localhost:4321", // Allow requests only from your frontend domain
@@ -40,7 +40,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
   })
 );
-log("Enabled cors for localhost:4477\n", "info");
+log("Enabled cors for localhost:4477\n");
 
 // start the express server
 // and log the environment
