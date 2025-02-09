@@ -6,6 +6,7 @@ var jsonParser = bodyParser.json();
 const { log } = require("./logger");
 const { wss } = require("./websocket"); // Import the server instance
 const WebSocket = require("ws");
+const { client } = require("./mongoClient")
 
 //added websocket lib tto skyblok
 
@@ -24,10 +25,28 @@ router.post("/events", jsonParser, (req, res) => {
   log("Received event:", "info");
   log(event)
 
+  const collection = client.db("skyblock").collection("events");
+  collection.insertOne(event, (err, result) => {
+    if (err) {
+      log("Error inserting event into MongoDB", "error");
+      log(err, "error");
+    } else {
+      log("Event inserted into MongoDB", "info");
+    }
+  });
+
   // Broadcast the event to all connected WebSocket clients
   broadcast(event);
 
   res.status(200).send("Event received");
+});
+
+// Endpoint to retrieve the last 30 events
+router.get("/events", async (req, res) => {
+  const db = await connectToMongo();
+  const collection = db.collection("events");
+  const events = await collection.find().sort({ _id: -1 }).limit(30).toArray();
+  res.json(events);
 });
 
 // all routes prefixed with /api/minecraft
