@@ -1,8 +1,8 @@
 const express = require("express");
 require("@dotenvx/dotenvx").config();
 const cors = require("cors");
-var clc = require("cli-color");
 const { env } = require("process");
+const WebSocket = require("ws");
 
 // Import the various route files
 var minecraftRoutes = require("./api-skyblock");
@@ -16,6 +16,27 @@ const { log } = require("./logger");
 // express init
 const app = express();
 const PORT = 4477;
+
+// Websocket init
+const wss = new WebSocket.Server({ noServer: true });
+
+// Broadcast function to send data to all connected clients
+function broadcast(data) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+}
+
+// Handle WebSocket connections
+wss.on("connection", (ws) => {
+  log("New WebSocket connection", "info");
+  ws.on("message", (message) => {
+    log(`Received message`, "info");
+    log(message, "info");
+  });
+});
 
 // set cors for the current development environment
 if (env.NODE_ENV === "production") {
@@ -47,18 +68,21 @@ app.use("/api", ogRoutes);
 
 // start the express server
 // and log the environment
-app.listen(PORT, () => {
-  log(
-    `Listening for requests at http://localhost:${PORT}\n`, "info"
-  );
+const server = app.listen(PORT, () => {
+  log(`Listening for requests at http://localhost:${PORT}\n`, "info");
   var environment = process.env.NODE_ENV;
   environment =
     environment == "development"
-      ? clc.magenta.bold.underline("development")
-      : clc.green.bold.underline("production");
-  log(
-   "Express server running in " +
-      environment +
-      " mode\n", "info"
-  );
+      ? "development"
+      : "production";
+  log("Express server running in " + environment + " mode\n", "info");
 });
+
+// Handle server upgrade to WebSocket
+server.on("upgrade", (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit("connection", ws, request);
+  });
+});
+
+module.exports = wss;

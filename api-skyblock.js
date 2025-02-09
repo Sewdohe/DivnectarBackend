@@ -3,28 +3,9 @@ const router = express.Router();
 const axios = require("axios");
 var bodyParser = require("body-parser");
 var jsonParser = bodyParser.json();
-const WebSocket = require("ws");
 const { log } = require("./logger");
+const wss = require("./index"); // Import the server instance
 
-const wss = new WebSocket.Server({ noServer: true });
-
-// Broadcast function to send data to all connected clients
-function broadcast(data) {
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(data));
-    }
-  });
-}
-
-// Handle WebSocket connections
-wss.on("connection", (ws) => {
-  log("New WebSocket connection", "info");
-  ws.on("message", (message) => {
-    log(`Received message`, "info");
-    log(message, "info");
-  });
-});
 
 // Endpoint to receive events from Minecraft server
 router.post("/events", jsonParser, (req, res) => {
