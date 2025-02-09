@@ -4,8 +4,16 @@ const axios = require("axios");
 var bodyParser = require("body-parser");
 var jsonParser = bodyParser.json();
 const { log } = require("./logger");
-const wss = require("./index"); // Import the server instance
+const { wss } = require("./websocket"); // Import the server instance
 
+// Broadcast function to send data to all connected clients
+function broadcast(data) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+}
 
 // Endpoint to receive events from Minecraft server
 router.post("/events", jsonParser, (req, res) => {

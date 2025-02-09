@@ -2,7 +2,7 @@ const express = require("express");
 require("@dotenvx/dotenvx").config();
 const cors = require("cors");
 const { env } = require("process");
-const WebSocket = require("ws");
+
 
 // Import the various route files
 var minecraftRoutes = require("./api-skyblock");
@@ -12,31 +12,12 @@ var ogRoutes = require("./api-og");
 var discordRoutes = require("./api-discord");
 
 const { log } = require("./logger");
+const { wss } = require("./websocket");
 
 // express init
 const app = express();
 const PORT = 4477;
 
-// Websocket init
-const wss = new WebSocket.Server({ noServer: true });
-
-// Broadcast function to send data to all connected clients
-function broadcast(data) {
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(data));
-    }
-  });
-}
-
-// Handle WebSocket connections
-wss.on("connection", (ws) => {
-  log("New WebSocket connection", "info");
-  ws.on("message", (message) => {
-    log(`Received message`, "info");
-    log(message, "info");
-  });
-});
 
 // set cors for the current development environment
 if (env.NODE_ENV === "production") {
@@ -85,4 +66,5 @@ server.on("upgrade", (request, socket, head) => {
   });
 });
 
-module.exports = wss;
+
+module.exports = { wss };
