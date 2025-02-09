@@ -30,8 +30,8 @@ if (env.NODE_ENV === "production") {
   app.use(
     cors({
       origin: "https://divnectar.com", // Allow requests only from your frontend domain
-      methods: ["GET", "POST", "OPTIONS"], // Allow the required methods
-      allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
+      methods: ["*"], // Allow the required methods
+      allowedHeaders: ["*"], // Allow specific headers
     })
   );
   log("Enabled cors for divnectar.com\n", "info");
@@ -40,7 +40,7 @@ if (env.NODE_ENV === "production") {
     cors({
       origin: "http://localhost:4321", // Allow requests only from your frontend domain
       methods: ["GET", "POST", "OPTIONS"], // Allow the required methods
-      allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
+      allowedHeaders: ["*"], // Allow specific headers
     })
   );
   log("Enabled cors for localhost:4477\n", "info");
