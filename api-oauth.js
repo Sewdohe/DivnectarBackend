@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-var clc = require("cli-color");
+const { log } = require("./logger");
 
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
@@ -12,7 +12,7 @@ const { client } = require("./mongoClient");
 // base route /api/oauth
 
 router.get("/discord", (req, res) => {
-  console.log("Redirecting to Discord OAuth");
+  log("Redirecting to Discord OAuth", "info");
   const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
     REDIRECT_URI
   )}&response_type=code&scope=identify email guilds`;
@@ -45,7 +45,7 @@ router.get("/callback", async (req, res) => {
 
     const userData = userResponse.data;
 
-    console.log("User data:", userData);
+    log("User data:" + userData);
     // Insert user into MongoDB
     try {
       const database = client.db("divnectar");
@@ -54,7 +54,7 @@ router.get("/callback", async (req, res) => {
       // Check if the user already exists
       const existingUser = await users.findOne({ id: userData.id });
       if (existingUser) {
-        console.log(`User ${userData.username} already exists in MongoDB`);
+        log(`User ${userData.username} already exists in MongoDB`, "warn");
         //TODO: fix this?
         // await users.updateOne({
         //   id: userData.id,
@@ -70,9 +70,9 @@ router.get("/callback", async (req, res) => {
           avatar: userData.avatar,
           email: userData.email,
         });
-        console.log("User created in MongoDB");
+        log("User created in MongoDB", "info");
       }
-      console.log("Creating user cookies...");
+      log("Creating user cookies...", "info");
 
       // add cookies that we can read later
       res.cookie("userId", userData.id, {

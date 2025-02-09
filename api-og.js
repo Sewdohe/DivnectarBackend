@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-var clc = require("cli-color");
+const {log} = require("./logger");
 var { uploadImageToStrapi, storeScreenshotUrl } = require("./utils");
 var { client } = require("./mongoClient");
 
 router.get("/og-image", async (req, res) => {
-  console.log(clc.yellow("request for screenshot of " + req.query.url));
+  log("request for screenshot of " + req.query.url, "info");
   const TOKEN = process.env.BROWSERLESS_TOKEN;
   const url = `https://browserless.divnectar.com/screenshot?token=${TOKEN}`;
   const headers = {
@@ -24,21 +24,21 @@ router.get("/og-image", async (req, res) => {
   try {
     const response = await axios.post(url, data, { headers, responseType: 'arraybuffer' });
     if (response.status !== 200 & response.data) {
-      console.log(clc.green("Screenshot taken successfully, recieved buffer"));
+      log("Screenshot taken successfully, recieved buffer");
     }
     const imageBuffer = response.data
     const screenshotUrl = await uploadImageToStrapi(imageBuffer, req.query.url);
     // the upload function returns the URL sent to the client.
     res.send(await storeScreenshotUrl(req.query.url, screenshotUrl));
   } catch (error) {
-    console.log("Error taking screenshot:", error);
+    log("Error taking screenshot:" + error, "error");
     res.status(500).send("Error taking screenshot");
   }
 });
 
 router.get("/check-og-image", async (req, res) => {
   //TODO: check timestamp on image and re-generate if older than 24 hours
-  console.log(clc.yellow("Checking for existing OG image:" + clc.blue(req.query.path)));
+  log("Checking for existing OG image:" + clc.blue(req.query.path), "info");
   const path = "https://divnectar.com" + req.query.path;
   if (!path) return res.status(400).send("Missing path");
 
@@ -48,10 +48,10 @@ router.get("/check-og-image", async (req, res) => {
     const existingImage = await collection.findOne({ path });
 
     if (existingImage) {
-      console.log(clc.green("OG image exists in MongoDB"));
+      log("OG image exists in MongoDB");
       return res.json({ exists: true, url: existingImage.screenshotUrl });
     } else {
-      console.log(clc.red("OG image does not exist in MongoDB"));
+      log("OG image does not exist in MongoDB");
       return res.json({ exists: false });
     }
   } catch (error) {

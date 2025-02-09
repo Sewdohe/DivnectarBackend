@@ -1,13 +1,13 @@
 require("@dotenvx/dotenvx").config();
-var clc = require("cli-color");
 const axios = require("axios");
 var { client } = require("./mongoClient");
+const { log } = require("./logger");
 
 // UTILITY FUNCTIONS
 async function uploadImageToStrapi(imageBuffer, url) {
   const pathname = url.replace(/\/$/, ''); // Remove trailing slash if any
   const siteRoute = pathname.split('/').pop(); // Get the last part of the pathname
-  console.log(clc.yellow("Uploading image to Strapi:" + siteRoute));
+  log("Uploading image to Strapi:" + siteRoute, "info");
 
   const form = new FormData();
   const blob = new Blob([imageBuffer], { type: 'image/png' });
@@ -19,10 +19,10 @@ async function uploadImageToStrapi(imageBuffer, url) {
         "Authorization": `Bearer ${process.env.STRAPI_API_KEY}`,
       },
     })
-    console.log(clc.yellow("Process complete. Image URL:"), clc.blue(`https://cms.divnectar.com${response.data[0].url}`));
+    log("Process complete. Image URL:" + `https://cms.divnectar.com${response.data[0].url}`, "info");
     return `https://cms.divnectar.com${response.data[0].url}`;
   } catch (error) {
-    console.log(clc.red.bold("Error uploading image to Strapi:", error));
+    log("Error uploading image to Strapi:", "error");
     return "Error uploading image to Strapi";
   }
 }
@@ -38,7 +38,7 @@ async function storeScreenshotUrl(path, screenshotUrl) {
   }
 
   await collection.insertOne({ path, screenshotUrl });
-  console.log(clc.green("Stored screenshot URL in MongoDB"));
+  log("Stored screenshot URL in MongoDB");
   return screenshotUrl;
 }
 

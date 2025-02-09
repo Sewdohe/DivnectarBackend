@@ -11,6 +11,8 @@ var skyblockRoutes = require("./api-skyblock");
 var ogRoutes = require("./api-og");
 var discordRoutes = require("./api-discord");
 
+const { log } = require("./logger");
+
 // express init
 const app = express();
 const PORT = 4477;
@@ -24,7 +26,7 @@ if (env.NODE_ENV === "production") {
       allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
     })
   );
-  console.log(clc.blue.bold("Enabled cors for divnectar.com\n"));
+  log("Enabled cors for divnectar.com\n", "info");
 } else if (env.NODE_ENV === "development") {
   app.use(
     cors({
@@ -33,7 +35,7 @@ if (env.NODE_ENV === "production") {
       allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
     })
   );
-  console.log(clc.blue.bold("Enabled cors for localhost:4477\n"));
+  log("Enabled cors for localhost:4477\n", "info");
 }
 
 // Import sectioned off routes
@@ -46,17 +48,17 @@ app.use("/api", ogRoutes);
 // start the express server
 // and log the environment
 app.listen(PORT, () => {
-  console.log(
-    clc.yellow.bold(`Listening for requests at http://localhost:${PORT}\n`)
+  log(
+    `Listening for requests at http://localhost:${PORT}\n`, "info"
   );
   var environment = process.env.NODE_ENV;
   environment =
     environment == "development"
       ? clc.magenta.bold.underline("development")
       : clc.green.bold.underline("production");
-  console.log(
-    clc.yellow("Express server running in ") +
+  log(
+   "Express server running in " +
       environment +
-      clc.yellow(" mode\n")
+      " mode\n", "info"
   );
 });

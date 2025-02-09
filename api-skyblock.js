@@ -1,16 +1,49 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-var clc = require("cli-color");
 var bodyParser = require("body-parser");
 var jsonParser = bodyParser.json();
+const WebSocket = require("ws");
+const { log } = require("./logger");
+
+const wss = new WebSocket.Server({ noServer: true });
+
+// Broadcast function to send data to all connected clients
+function broadcast(data) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+}
+
+// Handle WebSocket connections
+wss.on("connection", (ws) => {
+  log("New WebSocket connection", "info");
+  ws.on("message", (message) => {
+    log(`Received message`, "info");
+    log(message, "info");
+  });
+});
+
+// Endpoint to receive events from Minecraft server
+router.post("/events", jsonParser, (req, res) => {
+  const event = req.body;
+  log("Received event:", "info");
+
+  // Broadcast the event to all connected WebSocket clients
+  broadcast(event);
+
+  res.status(200).send("Event received");
+});
 
 // all routes prefixed with /api/minecraft
 router.get("/players", async (req, res) => {
   const serverTAPUrl = "https://api.divnectar.com";
   const serverTAPKey = process.env.SERVERTAP_API_KEY;
-  console.log(
-    clc.yellow.bold(`ServerTAP Key: ${serverTAPKey} | hitting ${serverTAPUrl}`)
+  log(
+    `ServerTAP Key: ${serverTAPKey} | hitting ${serverTAPUrl}`,
+    "info"
   );
 
   const headers = {
@@ -23,7 +56,7 @@ router.get("/players", async (req, res) => {
     if (response.status !== 200) {
       throw new Error("Failed to get online player list");
     }
-    console.log(clc.green(`Players: ${response.data}`));
+    log(`Players: ${response.data}`, "info");
     res.send(response.data);
   } catch (error) {
     console.error("Error getting players:", error);
@@ -35,8 +68,9 @@ router.get("/players", async (req, res) => {
 router.get("/players/all", async (req, res) => {
   const serverTAPUrl = "https://api.divnectar.com";
   const serverTAPKey = process.env.SERVERTAP_API_KEY;
-  console.log(
-    clc.yellow.bold(`ServerTAP Key: ${serverTAPKey} | hitting ${serverTAPUrl}`)
+  log(
+    `ServerTAP Key: ${serverTAPKey} | hitting ${serverTAPUrl}`,
+    "info"
   );
 
   const headers = {
@@ -51,7 +85,7 @@ router.get("/players/all", async (req, res) => {
     if (response.status !== 200) {
       throw new Error("Failed to get complete player list");
     }
-    console.log(clc.green(`All Players: ${response.data}`));
+    log(`All Players: ${response.data}`, "info");
     res.send(response.data);
   } catch (error) {
     console.error("Error getting all players:", error);
@@ -61,7 +95,7 @@ router.get("/players/all", async (req, res) => {
 
 router.post("/command", async (req, res) => {
   const command = req.query.command;
-  console.log(clc.yellow("Request to run as command on skyblock", command));
+  log("Request to run as command on skyblock", "info");
 
   if (!command) {
     return res.status(400).send("Missing command");
@@ -75,10 +109,10 @@ router.post("/command", async (req, res) => {
     time: 0,
   };
 
-  console.log(data);
+  log(data, "info");
 
   try {
-    console.log(clc.blue("Running command on skyblock:"), clc.yellow(command));
+    log("Running command on skyblock:", "info");
     const response = await axios.post(`${serverTAPUrl}/v1/server/exec`, data, {
       headers: {
         key: `${serverTAPKey}`,
@@ -88,7 +122,7 @@ router.post("/command", async (req, res) => {
     if (response.status !== 200) {
       throw new Error("Failed to run command");
     }
-    console.log(clc.green("Command executed successfully"));
+    log("Command executed successfully", "info");
     res.send("Command executed successfully");
   } catch (error) {
     console.error("Error running command:", error);
@@ -124,7 +158,7 @@ router.post("/get-player", async (req, res) => {
     if (response.status !== 200) {
       throw new Error("Failed to search for player name");
     }
-    console.log(clc.green(`Player found: ${response.data.displayName}`));
+    log(`Player found: ${response.data.displayName}`, "info");
     res.send("Command executed successfully");
   } catch (error) {
     console.error("Error running command:", error);
@@ -144,12 +178,12 @@ router.post("/player/online", jsonParser, async (req, res) => {
 
   const headers = {
     key: `${serverTAPKey}`,
-    'Content-Type': 'multipart/form-data'
+    "Content-Type": "multipart/form-data",
   };
 
   const data = new FormData();
   data.append("uuid", uuid);
-  data.append("message", '%player_online%');
+  data.append("message", "%player_online%");
 
   try {
     const response = await axios.post(
@@ -160,8 +194,9 @@ router.post("/player/online", jsonParser, async (req, res) => {
     if (response.status !== 200) {
       throw new Error("Failed to get online status");
     }
-    console.log(
-      clc.green(`player ${response.data == true ? "is" : "is not"} online`)
+    log(
+      `player ${response.data == true ? "is" : "is not"} online`,
+      "info"
     );
     res.send(response.data);
   } catch (error) {

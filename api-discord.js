@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const mysql = require("mysql");
-var clc = require("cli-color");
+const { log } = require("./logger");
 var { client } = require("./mongoClient")
 const { env } = require("process");
 
@@ -20,11 +20,11 @@ db.connect((err) => {
     console.error('Error connecting to the database:', err);
     return;
   }
-  console.log('Connected to the database');
+  log('Connected to the database');
 });
 
 router.get('/link-minecraft', async (req, res) => {
-  console.log(clc.yellow.bold('Attempting to link Minecraft account for Discord user'));
+  log('Attempting to link Minecraft account for Discord user', "info");
   const discord_id = req.query.discord_id;
 
   if (!discord_id) {
@@ -49,7 +49,7 @@ router.get('/link-minecraft', async (req, res) => {
         { $set: { minecraft_uuid: minecraft_uuid } },
         { upsert: true }
       );
-      console.log(clc.green('Minecraft UUID added to user data in MongoDB'));
+      slog('Minecraft UUID added to user data in MongoDB', "info");
 
       if (env.NODE_ENV === "production") {
         res.redirect('https://divnectar.com/profile?just_linked=true');
