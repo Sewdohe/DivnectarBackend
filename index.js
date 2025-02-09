@@ -18,6 +18,12 @@ const { wss } = require("./websocket");
 const app = express();
 const PORT = 4477;
 
+// Import sectioned off routes
+app.use("/api/minecraft/", minecraftRoutes);
+app.use("/api/oauth", oauthRoutes);
+app.use("/api/skyblock", skyblockRoutes);
+app.use("/api/discord", discordRoutes);
+app.use("/api", ogRoutes);
 
 // set cors for the current development environment
 if (env.NODE_ENV === "production") {
@@ -40,17 +46,9 @@ if (env.NODE_ENV === "production") {
   log("Enabled cors for localhost:4477\n", "info");
 }
 
-// Import sectioned off routes
-app.use("/api/minecraft/", minecraftRoutes);
-app.use("/api/oauth", oauthRoutes);
-app.use("/api/skyblock", skyblockRoutes);
-app.use("/api/discord", discordRoutes);
-app.use("/api", ogRoutes);
-
 // start the express server
 // and log the environment
 const server = app.listen(PORT, () => {
-  log(`Listening for requests at http://localhost:${PORT}\n`, "info");
   var environment = process.env.NODE_ENV;
   environment =
     environment == "development"
