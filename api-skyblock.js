@@ -19,6 +19,7 @@ function broadcast(data) {
 router.post("/events", jsonParser, (req, res) => {
   const event = req.body;
   log("Received event:", "info");
+  log(event)
 
   // Broadcast the event to all connected WebSocket clients
   broadcast(event);
