@@ -43,8 +43,7 @@ router.post("/events", jsonParser, (req, res) => {
 
 // Endpoint to retrieve the last 30 events
 router.get("/events", async (req, res) => {
-  const db = await connectToMongo();
-  const collection = db.collection("events");
+  const collection = client.db("skyblock").collection("events");
   const events = await collection.find().sort({ _id: -1 }).limit(30).toArray();
   res.json(events);
 });
