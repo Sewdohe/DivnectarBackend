@@ -38,7 +38,7 @@ router.get("/og-image", async (req, res) => {
 
 router.get("/check-og-image", async (req, res) => {
   //TODO: check timestamp on image and re-generate if older than 24 hours
-  log("Checking for existing OG image:" + clc.blue(req.query.path), "info");
+  log("Checking for existing OG image:" + req.query.path, "info");
   const path = "https://divnectar.com" + req.query.path;
   if (!path) return res.status(400).send("Missing path");
 

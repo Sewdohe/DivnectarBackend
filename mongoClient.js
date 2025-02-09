@@ -14,7 +14,7 @@ async function connectToMongoDB() {
     log("Connected to MongoDB", "info");
     return client;
   } catch (err) {
-    console.error(clc.red(err));
+    console.error(err);
   }
 }
 
