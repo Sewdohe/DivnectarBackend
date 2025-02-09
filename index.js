@@ -3,27 +3,12 @@ require("@dotenvx/dotenvx").config();
 const cors = require("cors");
 const { env } = require("process");
 
-
-// Import the various route files
-var minecraftRoutes = require("./api-skyblock");
-var oauthRoutes = require("./api-oauth");
-var skyblockRoutes = require("./api-skyblock");
-var ogRoutes = require("./api-og");
-var discordRoutes = require("./api-discord");
-
 const { log } = require("./logger");
 const { wss } = require("./websocket");
 
 // express init
 const app = express();
 const PORT = 4477;
-
-// Import sectioned off routes
-app.use("/api/minecraft/", minecraftRoutes);
-app.use("/api/oauth", oauthRoutes);
-app.use("/api/skyblock", skyblockRoutes);
-app.use("/api/discord", discordRoutes);
-app.use("/api", ogRoutes);
 
 // set cors for the current development environment
 if (env.NODE_ENV === "production") {
@@ -45,6 +30,20 @@ if (env.NODE_ENV === "production") {
   );
   log("Enabled cors for localhost:4477\n", "info");
 }
+
+  // Import the various route files
+  var minecraftRoutes = require("./api-skyblock");
+  var oauthRoutes = require("./api-oauth");
+  var skyblockRoutes = require("./api-skyblock");
+  var ogRoutes = require("./api-og");
+  var discordRoutes = require("./api-discord");
+
+  // Declare sectioned off routes
+  app.use("/api/minecraft/", minecraftRoutes);
+  app.use("/api/oauth", oauthRoutes);
+  app.use("/api/skyblock", skyblockRoutes);
+  app.use("/api/discord", discordRoutes);
+  app.use("/api", ogRoutes);
 
 // start the express server
 // and log the environment
