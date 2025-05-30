@@ -175,6 +175,39 @@ router.post("/get-player", async (req, res) => {
   }
 });
 
+router.get("/player/:uuid", async (req, res) => {
+  const uuid = req.params.uuid;
+  console.log(`get info for uuid: ${uuid}`)
+
+
+  if (!uuid) {
+    return res.status(400).send("Missing player UUID");
+  }
+
+  const serverTAPUrl = "https://api.divnectar.com";
+  const serverTAPKey = process.env.SERVERTAP_API_KEY;
+
+  const headers = {
+    key: `${serverTAPKey}`,
+    "Content-Type": "application/json",
+  };
+
+  try {
+    const response = await axios.get(
+      `https://api.divnectar.com/v1/players/${uuid}`,
+      { headers }
+    );
+    if (response.status !== 200) {
+      throw new Error("Failed to search for player name");
+    }
+    console.log(`Player found: ${response.data.displayName}`);
+    res.send(response.data);
+  } catch (error) {
+    // console.error("Error getting player info:", error);
+    res.status(500).send("Error getting player info");
+  }
+});
+
 router.post("/player/online", jsonParser, async (req, res) => {
   const uuid = req.body.uuid;
 
