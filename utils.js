@@ -5,25 +5,39 @@ const { log } = require("./logger");
 
 // UTILITY FUNCTIONS
 async function uploadImageToStrapi(imageBuffer, url) {
-  const pathname = url.replace(/\/$/, ''); // Remove trailing slash if any
-  const siteRoute = pathname.split('/').pop(); // Get the last part of the pathname
-  log("Uploading image to Strapi:" + siteRoute, "info");
-
-  const form = new FormData();
-  const blob = new Blob([imageBuffer], { type: 'image/png' });
-  form.append("files", blob, `${siteRoute}.png`);
-
   try {
+    const pathname = url.replace(/\/$/, ''); // Remove trailing slash if any
+    const urlParts = pathname.split('/').filter(part => part); // Remove empty parts
+    const siteRoute = urlParts.pop() || 'home'; // Get the last part or use 'home' for root
+
+    // Generate filename with timestamp to avoid duplicates
+    const timestamp = Date.now();
+    const filename = `og-${siteRoute}-${timestamp}.png`;
+
+    log(`Uploading image to Strapi: ${filename}`, "info");
+
+    const form = new FormData();
+    const blob = new Blob([imageBuffer], { type: 'image/png' });
+    form.append("files", blob, filename);
+
     const response = await axios.post("https://cms.divnectar.com/api/upload", form, {
       headers: {
         "Authorization": `Bearer ${process.env.STRAPI_API_KEY}`,
       },
-    })
-    log("Process complete. Image URL:" + `https://cms.divnectar.com${response.data[0].url}`, "info");
-    return `https://cms.divnectar.com${response.data[0].url}`;
+    });
+
+    if (response.data && response.data[0] && response.data[0].url) {
+      const uploadedUrl = `https://cms.divnectar.com${response.data[0].url}`;
+      log(`Upload complete. Image URL: ${uploadedUrl}`, "info");
+      return uploadedUrl;
+    } else {
+      log("Unexpected response format from Strapi", "error");
+      return "Error: Unexpected response format";
+    }
   } catch (error) {
-    log("Error uploading image to Strapi:", "error");
-    return "Error uploading image to Strapi";
+    log(`Error uploading image to Strapi: ${error.message}`, "error");
+    console.error(error);
+    return `Error uploading image to Strapi: ${error.message}`;
   }
 }
 // function stores the screenshot in the database, or checks if one already exists

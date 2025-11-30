@@ -6,32 +6,75 @@ var { uploadImageToStrapi, storeScreenshotUrl } = require("./utils");
 var { client } = require("./mongoClient");
 
 router.get("/og-image", async (req, res) => {
-  log("request for screenshot of " + req.query.url, "info");
+  const targetUrl = req.query.url;
+
+  if (!targetUrl) {
+    log("Missing URL parameter", "error");
+    return res.status(400).send("Missing URL parameter");
+  }
+
+  log("Request for screenshot of: " + targetUrl, "info");
+
   const TOKEN = process.env.BROWSERLESS_TOKEN;
-  const url = `https://browserless.divnectar.com/screenshot?token=${TOKEN}`;
+  const browserlessUrl = `https://browserless.divnectar.com/screenshot?token=${TOKEN}`;
+
   const headers = {
     "Cache-Control": "no-cache",
     "Content-Type": "application/json",
   };
+
   const data = {
-    url: req.query.url,
+    url: targetUrl,
     options: {
       fullPage: false,
       type: "png",
     },
+    gotoOptions: {
+      waitUntil: "networkidle2", // Wait until network is idle
+      timeout: 30000, // 30 second timeout
+    },
+    viewport: {
+      width: 1200,
+      height: 630, // Standard OG image size
+      deviceScaleFactor: 2, // Higher quality
+    },
+    // Set dark mode preference
+    emulateMediaFeatures: [
+      {
+        name: "prefers-color-scheme",
+        value: "dark"
+      }
+    ],
+    waitFor: 2000, // Additional 2 second wait for content to settle
   };
 
   try {
-    const response = await axios.post(url, data, { headers, responseType: 'arraybuffer' });
-    if (response.status !== 200 & response.data) {
-      log("Screenshot taken successfully, recieved buffer");
+    log("Sending screenshot request to browserless...", "info");
+    const response = await axios.post(browserlessUrl, data, {
+      headers,
+      responseType: 'arraybuffer',
+      timeout: 35000 // Overall request timeout
+    });
+
+    if (response.status === 200 && response.data) {
+      log("Screenshot taken successfully, received buffer", "info");
+      const imageBuffer = response.data;
+      const screenshotUrl = await uploadImageToStrapi(imageBuffer, targetUrl);
+
+      if (screenshotUrl.includes("Error")) {
+        log("Failed to upload to Strapi", "error");
+        return res.status(500).send("Failed to upload screenshot");
+      }
+
+      const storedUrl = await storeScreenshotUrl(targetUrl, screenshotUrl);
+      res.send(storedUrl);
+    } else {
+      log("Unexpected response from browserless: " + response.status, "error");
+      res.status(500).send("Failed to take screenshot");
     }
-    const imageBuffer = response.data
-    const screenshotUrl = await uploadImageToStrapi(imageBuffer, req.query.url);
-    // the upload function returns the URL sent to the client.
-    res.send(await storeScreenshotUrl(req.query.url, screenshotUrl));
   } catch (error) {
-    log("Error taking screenshot:" + error, "error");
+    log("Error taking screenshot: " + error.message, "error");
+    console.error(error);
     res.status(500).send("Error taking screenshot");
   }
 });

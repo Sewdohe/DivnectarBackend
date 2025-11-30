@@ -4,7 +4,7 @@ const cors = require("cors");
 const { env } = require("process");
 
 const { log } = require("./logger");
-const { wss } = require("./websocket");
+const { initializeScheduledTasks } = require("./scheduled-tasks");
 
 // express init
 const app = express();
@@ -31,23 +31,19 @@ if (env.NODE_ENV === "production") {
   log("Enabled cors for localhost:4477\n", "info");
 }
 
-  // Import the various route files
-  var minecraftRoutes = require("./api-skyblock");
-  var oauthRoutes = require("./api-oauth");
-  var skyblockRoutes = require("./api-skyblock");
-  var ogRoutes = require("./api-og");
-  var discordRoutes = require("./api-discord");
+// Import the various route files
+var oauthRoutes = require("./api-oauth");
+var ogRoutes = require("./api-og");
+var discordRoutes = require("./api-discord");
 
-  // Declare sectioned off routes
-  app.use("/api/minecraft/", minecraftRoutes);
-  app.use("/api/oauth", oauthRoutes);
-  app.use("/api/skyblock", skyblockRoutes);
-  app.use("/api/discord", discordRoutes);
-  app.use("/api", ogRoutes);
+// Declare sectioned off routes
+app.use("/api/oauth", oauthRoutes);
+app.use("/api/discord", discordRoutes);
+app.use("/api", ogRoutes);
 
 // start the express server
 // and log the environment
-const server = app.listen(PORT, () => {
+app.listen(PORT, () => {
   log(`Listening for requests at ${env.NODE_ENV === "development" ? 'http://localhost' : 'https://backend.divnectar.com'}:${PORT}\n`, "info");
   var environment = process.env.NODE_ENV;
   environment =
@@ -55,14 +51,7 @@ const server = app.listen(PORT, () => {
       ? "development"
       : "production";
   log("Express server running in " + environment + " mode\n", "info");
+
+  // Initialize scheduled tasks (OG image cleanup, etc.)
+  initializeScheduledTasks();
 });
-
-// Handle server upgrade to WebSocket
-server.on("upgrade", (request, socket, head) => {
-  wss.handleUpgrade(request, socket, head, (ws) => {
-    wss.emit("connection", ws, request);
-  });
-});
-
-
-module.exports = { wss };
