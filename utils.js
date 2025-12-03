@@ -4,8 +4,12 @@ var { client } = require("./mongoClient");
 const { log } = require("./logger");
 
 // UTILITY FUNCTIONS
-async function uploadImageToStrapi(imageBuffer, url) {
+async function uploadImageToWordPress(imageBuffer, url) {
   try {
+    if (!imageBuffer || imageBuffer.length === 0) {
+      throw new Error("Image buffer is empty");
+    }
+
     const pathname = url.replace(/\/$/, ''); // Remove trailing slash if any
     const urlParts = pathname.split('/').filter(part => part); // Remove empty parts
     const siteRoute = urlParts.pop() || 'home'; // Get the last part or use 'home' for root
@@ -14,46 +18,77 @@ async function uploadImageToStrapi(imageBuffer, url) {
     const timestamp = Date.now();
     const filename = `og-${siteRoute}-${timestamp}.png`;
 
-    log(`Uploading image to Strapi: ${filename}`, "info");
+    log(`Uploading image to WordPress: ${filename}`, "info");
 
-    const form = new FormData();
-    const blob = new Blob([imageBuffer], { type: 'image/png' });
-    form.append("files", blob, filename);
+    const WORDPRESS_URL = process.env.WORDPRESS_URL;
+    const WORDPRESS_USER = process.env.WORDPRESS_USER;
+    const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
 
-    const response = await axios.post("https://cms.divnectar.com/api/upload", form, {
-      headers: {
-        "Authorization": `Bearer ${process.env.STRAPI_API_KEY}`,
-      },
-    });
+    if (!WORDPRESS_URL || !WORDPRESS_USER || !WORDPRESS_APP_PASSWORD) {
+      throw new Error("WordPress credentials not configured");
+    }
 
-    if (response.data && response.data[0] && response.data[0].url) {
-      const uploadedUrl = `https://cms.divnectar.com${response.data[0].url}`;
+    // WordPress REST API expects binary data directly
+    const response = await axios.post(
+      `${WORDPRESS_URL}/wp-json/wp/v2/media`,
+      imageBuffer,
+      {
+        headers: {
+          "Content-Type": "image/png",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Authorization": `Basic ${Buffer.from(`${WORDPRESS_USER}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
+        },
+        timeout: 30000, // 30 second timeout
+      }
+    );
+
+    if (response.data && response.data.source_url) {
+      const uploadedUrl = response.data.source_url;
       log(`Upload complete. Image URL: ${uploadedUrl}`, "info");
       return uploadedUrl;
     } else {
-      log("Unexpected response format from Strapi", "error");
-      return "Error: Unexpected response format";
+      throw new Error("Unexpected response format from WordPress");
     }
   } catch (error) {
-    log(`Error uploading image to Strapi: ${error.message}`, "error");
-    console.error(error);
-    return `Error uploading image to Strapi: ${error.message}`;
+    log(`Error uploading image to WordPress: ${error.message}`, "error");
+    if (error.response) {
+      log(`WordPress API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`, "error");
+    }
+    throw new Error(`Failed to upload to WordPress: ${error.message}`);
   }
 }
-// function stores the screenshot in the database, or checks if one already exists
-// and returns the URL if so.
+// function stores or updates the screenshot in the database with timestamp
 async function storeScreenshotUrl(path, screenshotUrl) {
-  const db = client.db('divnectar');
-  const collection = db.collection('og_images');
+  try {
+    const db = client.db('divnectar');
+    const collection = db.collection('og_images');
 
-  const existingImage = await collection.findOne({ path });
-  if (existingImage) {
-    return existingImage.screenshotUrl;
+    // Use updateOne with upsert to either insert new or update existing
+    const result = await collection.updateOne(
+      { path },
+      {
+        $set: {
+          screenshotUrl,
+          updatedAt: new Date(),
+        },
+        $setOnInsert: {
+          createdAt: new Date(),
+        }
+      },
+      { upsert: true }
+    );
+
+    if (result.upsertedCount > 0) {
+      log("Stored new screenshot URL in MongoDB", "info");
+    } else {
+      log("Updated existing screenshot URL in MongoDB", "info");
+    }
+
+    return screenshotUrl;
+  } catch (error) {
+    log(`Error storing screenshot URL: ${error.message}`, "error");
+    throw error;
   }
-
-  await collection.insertOne({ path, screenshotUrl });
-  log("Stored screenshot URL in MongoDB");
-  return screenshotUrl;
 }
 
-module.exports = {  uploadImageToStrapi, storeScreenshotUrl };
+module.exports = {  uploadImageToWordPress, storeScreenshotUrl };
