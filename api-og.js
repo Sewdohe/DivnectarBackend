@@ -45,25 +45,15 @@ router.get("/og-image", async (req, res) => {
     const data = {
       url: targetUrl,
       options: {
-        fullPage: false,
         type: "png",
       },
       gotoOptions: {
-        waitUntil: "networkidle2",
-        timeout: 30000,
+        waitUntil: "networkidle0",
       },
       viewport: {
         width: 1200,
         height: 630,
-        deviceScaleFactor: 2,
       },
-      emulateMediaFeatures: [
-        {
-          name: "prefers-color-scheme",
-          value: "dark"
-        }
-      ],
-      waitFor: 2000,
     };
 
     log("Sending screenshot request to browserless...", "info");
