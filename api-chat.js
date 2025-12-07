@@ -2,11 +2,17 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const mysql = require('mysql');
+const { Rcon } = require('rcon-client');
 const { log } = require('./logger');
 
 // ServerTAP configuration
 const SERVERTAP_URL = 'https://api.divnectar.com';
 const SERVERTAP_KEY = 'lesson.848.motion';
+
+// RCON configuration
+const RCON_HOST = process.env.RCON_HOST || 'localhost';
+const RCON_PORT = parseInt(process.env.RCON_PORT) || 25575;
+const RCON_PASSWORD = process.env.RCON_PASSWORD || '';
 
 // MySQL connection for DiscordSRV data
 const mysqlPool = mysql.createPool({
@@ -25,9 +31,27 @@ function setWebSocketClients(clients) {
   wsClients = clients;
 }
 
+// Catch-all to log any requests to webhook endpoints
+router.all('/webhook/*', (req, res, next) => {
+  log(`=== WEBHOOK REQUEST RECEIVED ===`, 'info');
+  log(`Method: ${req.method}`, 'info');
+  log(`Path: ${req.path}`, 'info');
+  log(`Headers: ${JSON.stringify(req.headers)}`, 'info');
+  log(`Body: ${JSON.stringify(req.body)}`, 'info');
+  next();
+});
+
 // Webhook endpoint for ServerTAP chat events
 router.post('/webhook/chat', express.json(), async (req, res) => {
   try {
+    log(`=== CHAT WEBHOOK RECEIVED ===`, 'info');
+    log(`Request body: ${JSON.stringify(req.body)}`, 'info');
+    log(`Request headers: ${JSON.stringify(req.headers)}`, 'info');
+
+    // Check if ServerTAP sent authentication
+    const authKey = req.headers['key'] || req.headers['authorization'] || req.query.key;
+    log(`Auth key from request: ${authKey}`, 'info');
+
     const { player, message, type } = req.body;
 
     // ServerTAP sends player as an object with displayName, uuid, etc.
@@ -35,8 +59,8 @@ router.post('/webhook/chat', express.json(), async (req, res) => {
       ? player
       : (player?.displayName || player?.name || 'Server');
 
-    log(`Chat webhook received: ${playerName}: ${message}`, 'info');
-    log(`Full webhook data: ${JSON.stringify(req.body)}`, 'info');
+    log(`Parsed player name: ${playerName}`, 'info');
+    log(`Message: ${message}`, 'info');
 
     // Broadcast to all connected WebSocket clients
     const chatMessage = {
@@ -47,12 +71,18 @@ router.post('/webhook/chat', express.json(), async (req, res) => {
       messageType: type || 'chat'
     };
 
+    log(`Broadcasting to ${wsClients.length} connected WebSocket clients`, 'info');
+    log(`Chat message to broadcast: ${JSON.stringify(chatMessage)}`, 'info');
+
+    let sentCount = 0;
     wsClients.forEach(client => {
       if (client.readyState === 1) { // WebSocket.OPEN
         client.send(JSON.stringify(chatMessage));
+        sentCount++;
       }
     });
 
+    log(`Successfully sent to ${sentCount} clients`, 'info');
     res.status(200).json({ success: true });
   } catch (error) {
     log(`Error handling chat webhook: ${error.message}`, 'error');
@@ -114,32 +144,28 @@ router.post('/send', express.json(), async (req, res) => {
             log(`Sending message as: ${playerName}`, 'info');
 
             try {
-              // Send message via ServerTAP REST API
-              const command = `say §d[Web] §r<${playerName}>§r ${message}`;
-              log(`Sending command to ServerTAP: ${command}`, 'info');
+              // Connect to Minecraft server via RCON
+              const rcon = await Rcon.connect({
+                host: RCON_HOST,
+                port: RCON_PORT,
+                password: RCON_PASSWORD
+              });
 
-              const response = await axios.post(
-                `${SERVERTAP_URL}/v1/server/exec`,
-                { command },
-                {
-                  headers: {
-                    'key': SERVERTAP_KEY,
-                    'Content-Type': 'application/json'
-                  }
-                }
-              );
+              // Send message using tellraw for better formatting
+              // Format: tellraw @a [{"text":"<PlayerName> ","color":"aqua"},{"text":"message"}]
+              const command = `tellraw @a [{"text":"<${playerName}> ","color":"aqua","bold":true},{"text":"${message.replace(/"/g, '\\"')}","color":"white"}]`;
 
-              log(`ServerTAP response: ${JSON.stringify(response.data)}`, 'info');
-              log(`Message sent to server: [Web] <${playerName}>: ${message}`, 'info');
+              log(`Executing RCON command: ${command}`, 'info');
+              const response = await rcon.send(command);
 
-              res.status(200).json({ success: true, playerName });
+              await rcon.end();
+
+              log(`Message sent successfully via RCON`, 'info');
+              res.status(200).json({ success: true, response });
             } catch (apiError) {
-              log(`Error sending message via ServerTAP: ${apiError.message}`, 'error');
-              if (apiError.response) {
-                log(`ServerTAP error response: ${JSON.stringify(apiError.response.data)}`, 'error');
-              }
+              log(`Error sending message via RCON: ${apiError.message}`, 'error');
               log(`Error stack: ${apiError.stack}`, 'error');
-              res.status(500).json({ error: 'Failed to send message to server: ' + (apiError.response?.data?.message || apiError.message) });
+              res.status(500).json({ error: 'Failed to send message to server: ' + apiError.message });
             }
           }
         );
