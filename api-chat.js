@@ -30,12 +30,18 @@ router.post('/webhook/chat', express.json(), async (req, res) => {
   try {
     const { player, message, type } = req.body;
 
-    log(`Chat webhook received: ${player}: ${message}`, 'info');
+    // ServerTAP sends player as an object with displayName, uuid, etc.
+    const playerName = typeof player === 'string'
+      ? player
+      : (player?.displayName || player?.name || 'Server');
+
+    log(`Chat webhook received: ${playerName}: ${message}`, 'info');
+    log(`Full webhook data: ${JSON.stringify(req.body)}`, 'info');
 
     // Broadcast to all connected WebSocket clients
     const chatMessage = {
       type: 'chat',
-      player: player || 'Server',
+      player: playerName,
       message: message,
       timestamp: Date.now(),
       messageType: type || 'chat'
@@ -60,11 +66,14 @@ router.post('/send', express.json(), async (req, res) => {
     const { message } = req.body;
     const { userId } = req.cookies;
 
+    log(`Send message request - userId: ${userId}, message: ${message}`, 'info');
+
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
     if (!userId) {
+      log('No userId cookie in send request', 'error');
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
@@ -75,14 +84,18 @@ router.post('/send', express.json(), async (req, res) => {
       async (error, results) => {
         if (error) {
           log(`Error querying DiscordSRV: ${error.message}`, 'error');
-          return res.status(500).json({ error: 'Database error' });
+          log(`Error stack: ${error.stack}`, 'error');
+          return res.status(500).json({ error: 'Database error: ' + error.message });
         }
+
+        log(`DiscordSRV query results: ${JSON.stringify(results)}`, 'info');
 
         if (results.length === 0) {
           return res.status(403).json({ error: 'Minecraft account not linked. Use /discord link in-game.' });
         }
 
         const minecraftUuid = results[0].uuid;
+        log(`Found Minecraft UUID: ${minecraftUuid}`, 'info');
 
         // Get player name
         mysqlPool.query(
@@ -91,18 +104,23 @@ router.post('/send', express.json(), async (req, res) => {
           async (err, userResults) => {
             if (err) {
               log(`Error fetching player name: ${err.message}`, 'error');
-              return res.status(500).json({ error: 'Database error' });
+              log(`Error stack: ${err.stack}`, 'error');
+              return res.status(500).json({ error: 'Database error: ' + err.message });
             }
 
+            log(`Player query results: ${JSON.stringify(userResults)}`, 'info');
+
             const playerName = userResults.length > 0 ? userResults[0].name : 'Unknown';
+            log(`Sending message as: ${playerName}`, 'info');
 
             try {
-              // Send message via ServerTAP API
-              await axios.post(
-                `${SERVERTAP_URL}/v1/chat/broadcast`,
-                {
-                  message: `§d[Web] §r<${playerName}>§r ${message}`
-                },
+              // Send message via ServerTAP REST API
+              const command = `say §d[Web] §r<${playerName}>§r ${message}`;
+              log(`Sending command to ServerTAP: ${command}`, 'info');
+
+              const response = await axios.post(
+                `${SERVERTAP_URL}/v1/server/exec`,
+                { command },
                 {
                   headers: {
                     'key': SERVERTAP_KEY,
@@ -111,12 +129,17 @@ router.post('/send', express.json(), async (req, res) => {
                 }
               );
 
+              log(`ServerTAP response: ${JSON.stringify(response.data)}`, 'info');
               log(`Message sent to server: [Web] <${playerName}>: ${message}`, 'info');
 
               res.status(200).json({ success: true, playerName });
             } catch (apiError) {
               log(`Error sending message via ServerTAP: ${apiError.message}`, 'error');
-              res.status(500).json({ error: 'Failed to send message to server' });
+              if (apiError.response) {
+                log(`ServerTAP error response: ${JSON.stringify(apiError.response.data)}`, 'error');
+              }
+              log(`Error stack: ${apiError.stack}`, 'error');
+              res.status(500).json({ error: 'Failed to send message to server: ' + (apiError.response?.data?.message || apiError.message) });
             }
           }
         );
@@ -124,7 +147,8 @@ router.post('/send', express.json(), async (req, res) => {
     );
   } catch (error) {
     log(`Error sending message to server: ${error.message}`, 'error');
-    res.status(500).json({ error: 'Failed to send message' });
+    log(`Error stack: ${error.stack}`, 'error');
+    res.status(500).json({ error: 'Failed to send message: ' + error.message });
   }
 });
 
