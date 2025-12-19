@@ -1,10 +1,11 @@
 require("@dotenvx/dotenvx").config();
 const axios = require("axios");
+const FormData = require("form-data");
 var { client } = require("./mongoClient");
 const { log } = require("./logger");
 
 // UTILITY FUNCTIONS
-async function uploadImageToWordPress(imageBuffer, url) {
+async function uploadImageToStrapi(imageBuffer, url) {
   try {
     if (!imageBuffer || imageBuffer.length === 0) {
       throw new Error("Image buffer is empty");
@@ -18,43 +19,51 @@ async function uploadImageToWordPress(imageBuffer, url) {
     const timestamp = Date.now();
     const filename = `og-${siteRoute}-${timestamp}.png`;
 
-    log(`Uploading image to WordPress: ${filename}`, "info");
+    log(`Uploading image to Strapi: ${filename}`, "info");
 
-    const WORDPRESS_URL = process.env.WORDPRESS_URL;
-    const WORDPRESS_USER = process.env.WORDPRESS_USER;
-    const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
+    const STRAPI_URL = process.env.STRAPI_URL;
+    const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN;
 
-    if (!WORDPRESS_URL || !WORDPRESS_USER || !WORDPRESS_APP_PASSWORD) {
-      throw new Error("WordPress credentials not configured");
+    if (!STRAPI_URL || !STRAPI_API_TOKEN) {
+      throw new Error("Strapi credentials not configured");
     }
 
-    // WordPress REST API expects binary data directly
+    // Create form data for Strapi upload
+    const formData = new FormData();
+    formData.append('files', imageBuffer, {
+      filename: filename,
+      contentType: 'image/png',
+    });
+
     const response = await axios.post(
-      `${WORDPRESS_URL}/wp-json/wp/v2/media`,
-      imageBuffer,
+      `${STRAPI_URL}/api/upload`,
+      formData,
       {
         headers: {
-          "Content-Type": "image/png",
-          "Content-Disposition": `attachment; filename="${filename}"`,
-          "Authorization": `Basic ${Buffer.from(`${WORDPRESS_USER}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
+          ...formData.getHeaders(),
+          "Authorization": `Bearer ${STRAPI_API_TOKEN}`,
         },
         timeout: 30000, // 30 second timeout
       }
     );
 
-    if (response.data && response.data.source_url) {
-      const uploadedUrl = response.data.source_url;
+    if (response.data && response.data[0] && response.data[0].url) {
+      // Strapi returns relative URLs, need to prepend STRAPI_URL if not absolute
+      let uploadedUrl = response.data[0].url;
+      if (!uploadedUrl.startsWith('http')) {
+        uploadedUrl = `${STRAPI_URL}${uploadedUrl}`;
+      }
       log(`Upload complete. Image URL: ${uploadedUrl}`, "info");
       return uploadedUrl;
     } else {
-      throw new Error("Unexpected response format from WordPress");
+      throw new Error("Unexpected response format from Strapi");
     }
   } catch (error) {
-    log(`Error uploading image to WordPress: ${error.message}`, "error");
+    log(`Error uploading image to Strapi: ${error.message}`, "error");
     if (error.response) {
-      log(`WordPress API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`, "error");
+      log(`Strapi API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`, "error");
     }
-    throw new Error(`Failed to upload to WordPress: ${error.message}`);
+    throw new Error(`Failed to upload to Strapi: ${error.message}`);
   }
 }
 // function stores or updates the screenshot in the database with timestamp
@@ -91,4 +100,4 @@ async function storeScreenshotUrl(path, screenshotUrl) {
   }
 }
 
-module.exports = {  uploadImageToWordPress, storeScreenshotUrl };
+module.exports = { uploadImageToStrapi, storeScreenshotUrl };

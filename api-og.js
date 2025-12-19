@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const {log} = require("./logger");
-var { uploadImageToWordPress, storeScreenshotUrl } = require("./utils");
+var { uploadImageToStrapi, storeScreenshotUrl } = require("./utils");
 var { client } = require("./mongoClient");
 
 router.get("/og-image", async (req, res) => {
@@ -68,13 +68,13 @@ router.get("/og-image", async (req, res) => {
       const imageBuffer = response.data;
 
       try {
-        const screenshotUrl = await uploadImageToWordPress(imageBuffer, targetUrl);
+        const screenshotUrl = await uploadImageToStrapi(imageBuffer, targetUrl);
 
         // Store or update in MongoDB with timestamp
         const storedUrl = await storeScreenshotUrl(targetUrl, screenshotUrl);
         res.send(storedUrl);
       } catch (uploadError) {
-        log("Failed to upload to WordPress: " + uploadError.message, "error");
+        log("Failed to upload to Strapi: " + uploadError.message, "error");
         return res.status(500).send("Failed to upload screenshot");
       }
     } else {
