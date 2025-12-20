@@ -34,6 +34,10 @@ async function uploadImageToStrapi(imageBuffer, url) {
       filename: filename,
       contentType: 'image/png',
     });
+    // Specify path to upload to og-images folder
+    formData.append('path', 'og-images');
+
+    log(`Attempting upload to ${STRAPI_URL}/api/upload with path: og-images`, "info");
 
     const response = await axios.post(
       `${STRAPI_URL}/api/upload`,
@@ -47,6 +51,9 @@ async function uploadImageToStrapi(imageBuffer, url) {
       }
     );
 
+    log(`Upload response status: ${response.status}`, "info");
+    log(`Upload response data: ${JSON.stringify(response.data)}`, "info");
+
     if (response.data && response.data[0] && response.data[0].url) {
       // Strapi returns relative URLs, need to prepend STRAPI_URL if not absolute
       let uploadedUrl = response.data[0].url;
@@ -56,6 +63,7 @@ async function uploadImageToStrapi(imageBuffer, url) {
       log(`Upload complete. Image URL: ${uploadedUrl}`, "info");
       return uploadedUrl;
     } else {
+      log(`Unexpected response format. Response: ${JSON.stringify(response.data)}`, "error");
       throw new Error("Unexpected response format from Strapi");
     }
   } catch (error) {
