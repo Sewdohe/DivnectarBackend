@@ -16,6 +16,22 @@ router.get("/og-image", async (req, res) => {
   log("Request for screenshot of: " + targetUrl, "info");
 
   try {
+    // Check if the URL returns 404 before generating OG image
+    try {
+      const pageCheck = await axios.head(targetUrl, {
+        timeout: 5000,
+        validateStatus: (status) => status < 500, // Don't throw on 404
+      });
+
+      if (pageCheck.status === 404) {
+        log(`Skipping OG image generation for 404 page: ${targetUrl}`, "info");
+        return res.status(404).send("Page not found - no OG image generated");
+      }
+    } catch (checkError) {
+      log(`Error checking page status: ${checkError.message}`, "warn");
+      // Continue with generation if check fails
+    }
+
     // Check MongoDB first to avoid unnecessary regeneration
     const db = client.db('divnectar');
     const collection = db.collection('og_images');
