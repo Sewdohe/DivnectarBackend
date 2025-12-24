@@ -48,12 +48,14 @@ var ogRoutes = require("./api-og");
 var discordRoutes = require("./api-discord");
 var chatRoutes = require("./api-chat");
 var adminRoutes = require("./api-admin");
+var photosRoutes = require("./api-photos");
 
 // Declare sectioned off routes
 app.use("/api/oauth", oauthRoutes);
 app.use("/api/discord", discordRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/photos", photosRoutes);
 app.use("/api", ogRoutes);
 
 // WebSocket connection handling
